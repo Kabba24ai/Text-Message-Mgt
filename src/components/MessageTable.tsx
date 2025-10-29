@@ -1,22 +1,22 @@
 import { Trash2, Edit, Copy, Send } from 'lucide-react';
-import { TextMessage } from '../lib/supabase';
+import { TextMessage, EmailMessage } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface MessageTableProps {
-  messages: TextMessage[];
+  messages: (TextMessage | EmailMessage)[];
   onSend: (id: string) => void;
-  onEdit: (message: TextMessage) => void;
-  onCopy: (message: TextMessage) => void;
+  onEdit: (message: TextMessage | EmailMessage) => void;
+  onCopy: (message: TextMessage | EmailMessage) => void;
   onDelete: (id: string) => void;
-  messageType: 'broadcast' | 'funnel_content';
+  messageType: 'broadcast' | 'funnel_content' | 'email_broadcast' | 'email_funnel_content';
 }
 
 export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messageType }: MessageTableProps) {
   const [funnelAssignments, setFunnelAssignments] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    if (messageType === 'funnel_content') {
+    if (messageType === 'funnel_content' || messageType === 'email_funnel_content') {
       fetchFunnelAssignments();
     }
   }, [messages, messageType]);
@@ -88,13 +88,13 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
               Content Name
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Content
+              {messageType === 'email_broadcast' || messageType === 'email_funnel_content' ? 'Subject / Content' : 'Content'}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
               Created Date
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
-              {messageType === 'broadcast' ? 'Sent Date' : 'Sales Funnels'}
+              {messageType === 'broadcast' || messageType === 'email_broadcast' ? 'Sent Date' : 'Sales Funnels'}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
@@ -118,16 +118,23 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
                   {message.content_name}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">
-                  {truncateContent(message.content)}
+                  {(messageType === 'email_broadcast' || messageType === 'email_funnel_content') && 'subject' in message ? (
+                    <div>
+                      <div className="font-semibold text-gray-900 mb-1">{message.subject}</div>
+                      <div>{truncateContent(message.content)}</div>
+                    </div>
+                  ) : (
+                    truncateContent(message.content)
+                  )}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
                   <div className="text-left">
-                    <div className="font-medium text-gray-900">{formatDate(message.created_date).date}</div>
-                    <div className="text-xs text-gray-500">{formatDate(message.created_date).time}</div>
+                    <div className="font-medium text-gray-900">{formatDate('created_date' in message ? message.created_date : message.created_at).date}</div>
+                    <div className="text-xs text-gray-500">{formatDate('created_date' in message ? message.created_date : message.created_at).time}</div>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  {messageType === 'broadcast' ? (
+                  {messageType === 'broadcast' || messageType === 'email_broadcast' ? (
                     <div className="text-left">
                       {!message.sent_date ? (
                         <div className="text-amber-600 font-semibold">PENDING</div>
@@ -157,11 +164,11 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex gap-2">
-                    {messageType === 'broadcast' && (
+                    {(messageType === 'broadcast' || messageType === 'email_broadcast') && (
                       <button
                         onClick={() => onSend(message.id)}
                         className="inline-flex items-center justify-center p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                        title="Send SMS"
+                        title={messageType === 'broadcast' ? 'Send SMS' : 'Send Email'}
                       >
                         <Send className="w-4 h-4" />
                       </button>

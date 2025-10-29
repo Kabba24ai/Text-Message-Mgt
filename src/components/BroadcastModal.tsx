@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { X, Send } from 'lucide-react';
-import { supabase, TextMessage } from '../lib/supabase';
+import { supabase, TextMessage, EmailMessage } from '../lib/supabase';
 
 interface BroadcastModalProps {
   isOpen: boolean;
   onClose: () => void;
+  messageChannel?: 'sms' | 'email';
 }
 
-export function BroadcastModal({ isOpen, onClose }: BroadcastModalProps) {
-  const [broadcastMessages, setBroadcastMessages] = useState<TextMessage[]>([]);
+export function BroadcastModal({ isOpen, onClose, messageChannel = 'sms' }: BroadcastModalProps) {
+  const [broadcastMessages, setBroadcastMessages] = useState<(TextMessage | EmailMessage)[]>([]);
   const [selectedMessageId, setSelectedMessageId] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -19,10 +20,13 @@ export function BroadcastModal({ isOpen, onClose }: BroadcastModalProps) {
   }, [isOpen]);
 
   const fetchBroadcastMessages = async () => {
+    const tableName = messageChannel === 'email' ? 'email_messages' : 'text_messages';
+    const messageType = messageChannel === 'email' ? 'email_broadcast' : 'broadcast';
+
     const { data, error } = await supabase
-      .from('text_messages')
+      .from(tableName)
       .select('*')
-      .eq('message_type', 'broadcast')
+      .eq('message_type', messageType)
       .order('content_name');
 
     if (error) {
@@ -39,8 +43,10 @@ export function BroadcastModal({ isOpen, onClose }: BroadcastModalProps) {
     }
 
     setSending(true);
+    const tableName = messageChannel === 'email' ? 'email_messages' : 'text_messages';
+
     const { error } = await supabase
-      .from('text_messages')
+      .from(tableName)
       .update({ sent_date: new Date().toISOString() })
       .eq('id', selectedMessageId);
 
@@ -63,7 +69,9 @@ export function BroadcastModal({ isOpen, onClose }: BroadcastModalProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-semibold text-gray-900">Send New Broadcast</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Send New {messageChannel === 'email' ? 'Email' : 'SMS'} Broadcast
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -75,7 +83,7 @@ export function BroadcastModal({ isOpen, onClose }: BroadcastModalProps) {
         <div className="p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Broadcast Message
+              Select {messageChannel === 'email' ? 'Email' : 'SMS'} Broadcast Message
             </label>
             <select
               value={selectedMessageId}
@@ -105,6 +113,14 @@ export function BroadcastModal({ isOpen, onClose }: BroadcastModalProps) {
                   </span>
                 </div>
               </div>
+              {messageChannel === 'email' && 'subject' in selectedMessage && (
+                <div className="mb-3">
+                  <div className="text-sm font-medium text-gray-700 mb-1">Subject:</div>
+                  <div className="bg-white border border-gray-200 rounded p-3">
+                    <p className="text-gray-800 font-semibold">{selectedMessage.subject}</p>
+                  </div>
+                </div>
+              )}
               <div className="bg-white border border-gray-200 rounded p-4">
                 <p className="text-gray-800 whitespace-pre-wrap">{selectedMessage.content}</p>
               </div>
@@ -126,7 +142,7 @@ export function BroadcastModal({ isOpen, onClose }: BroadcastModalProps) {
               className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-5 h-5" />
-              {sending ? 'Sending...' : 'Send Broadcast'}
+              {sending ? 'Sending...' : `Send ${messageChannel === 'email' ? 'Email' : 'SMS'} Broadcast`}
             </button>
             <button
               onClick={onClose}

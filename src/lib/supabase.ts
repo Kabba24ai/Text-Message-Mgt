@@ -17,6 +17,17 @@ export type TextMessage = {
   updated_at: string;
 };
 
+export type EmailMessage = {
+  id: string;
+  context_category: string;
+  content_name: string;
+  subject: string;
+  content: string;
+  message_type: 'email_broadcast' | 'email_funnel_content';
+  sent_date: string | null;
+  created_at: string;
+};
+
 export type SalesFunnel = {
   id: string;
   name: string;

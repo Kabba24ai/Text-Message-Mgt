@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Save } from 'lucide-react';
-import { TextMessage, supabase } from '../lib/supabase';
+import { TextMessage, EmailMessage, supabase } from '../lib/supabase';
 
 interface MessageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (message: Partial<TextMessage>) => void;
-  message?: TextMessage | null;
+  onSave: (message: Partial<TextMessage> | Partial<EmailMessage>) => void;
+  message?: TextMessage | EmailMessage | null;
   mode: 'create' | 'edit';
+  messageChannel?: 'sms' | 'email';
 }
 
-export function MessageModal({ isOpen, onClose, onSave, message, mode }: MessageModalProps) {
+export function MessageModal({ isOpen, onClose, onSave, message, mode, messageChannel = 'sms' }: MessageModalProps) {
   const [formData, setFormData] = useState({
     context_category: '',
     content_name: '',
+    subject: '',
     content: '',
-    message_type: 'broadcast' as 'broadcast' | 'funnel_content'
+    message_type: 'broadcast' as 'broadcast' | 'funnel_content' | 'email_broadcast' | 'email_funnel_content'
   });
   const [categories, setCategories] = useState<string[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -31,15 +33,18 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode }: Message
       setFormData({
         context_category: message.context_category,
         content_name: message.content_name,
+        subject: 'subject' in message ? message.subject : '',
         content: message.content,
         message_type: message.message_type
       });
     } else {
+      const defaultType = messageChannel === 'email' ? 'email_broadcast' : 'broadcast';
       setFormData({
         context_category: '',
         content_name: '',
+        subject: '',
         content: '',
-        message_type: 'broadcast'
+        message_type: defaultType
       });
     }
   }, [message, mode, isOpen]);
@@ -156,13 +161,38 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode }: Message
             </label>
             <select
               value={formData.message_type}
-              onChange={(e) => setFormData({ ...formData, message_type: e.target.value as 'broadcast' | 'funnel_content' })}
+              onChange={(e) => setFormData({ ...formData, message_type: e.target.value as any })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="broadcast">Broadcast</option>
-              <option value="funnel_content">Funnel Content</option>
+              {messageChannel === 'sms' ? (
+                <>
+                  <option value="broadcast">SMS Broadcast</option>
+                  <option value="funnel_content">SMS Funnel Content</option>
+                </>
+              ) : (
+                <>
+                  <option value="email_broadcast">Email Broadcast</option>
+                  <option value="email_funnel_content">Email Funnel Content</option>
+                </>
+              )}
             </select>
           </div>
+
+          {messageChannel === 'email' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Subject
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter email subject"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
