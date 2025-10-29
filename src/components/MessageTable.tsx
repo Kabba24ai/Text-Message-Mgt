@@ -50,15 +50,25 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
     setFunnelAssignments(assignments);
   };
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'PENDING';
+    if (!dateString) {
+      return {
+        date: 'PENDING',
+        time: ''
+      };
+    }
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return {
+      date: date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+    };
   };
 
   const truncateContent = (content: string) => {
@@ -110,14 +120,24 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
                 <td className="px-6 py-4 text-sm text-gray-600">
                   {truncateContent(message.content)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatDate(message.created_date)}
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">{formatDate(message.created_date).date}</div>
+                    <div className="text-xs text-gray-500">{formatDate(message.created_date).time}</div>
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-sm">
                   {messageType === 'broadcast' ? (
-                    <span className={`${!message.sent_date ? 'text-amber-600 font-semibold' : 'text-gray-500'}`}>
-                      {formatDate(message.sent_date)}
-                    </span>
+                    <div className="text-left">
+                      {!message.sent_date ? (
+                        <div className="text-amber-600 font-semibold">PENDING</div>
+                      ) : (
+                        <>
+                          <div className="font-medium text-gray-900">{formatDate(message.sent_date).date}</div>
+                          <div className="text-xs text-gray-500">{formatDate(message.sent_date).time}</div>
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <div className="flex flex-wrap gap-1">
                       {funnelAssignments[message.id]?.length > 0 ? (
