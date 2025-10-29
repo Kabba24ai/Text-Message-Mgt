@@ -323,6 +323,7 @@ function App() {
                 onEdit={handleEdit}
                 onCopy={handleCopy}
                 onDelete={handleDelete}
+                messageType={activeFilter}
               />
             )}
           </>

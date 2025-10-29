@@ -16,3 +16,18 @@ export type TextMessage = {
   created_at: string;
   updated_at: string;
 };
+
+export type SalesFunnel = {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FunnelContentAssignment = {
+  id: string;
+  funnel_id: string;
+  message_id: string;
+  created_at: string;
+};
