@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, Plus, FolderOpen, Send } from 'lucide-react';
+import { MessageCircle, Plus, FolderOpen, Send, Search } from 'lucide-react';
 import { supabase, TextMessage } from './lib/supabase';
 import { MessageTable } from './components/MessageTable';
 import { MessageModal } from './components/MessageModal';
@@ -19,6 +19,9 @@ function App() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [loading, setLoading] = useState(true);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [contentNameSearch, setContentNameSearch] = useState<string>('');
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
     fetchMessages();
@@ -26,7 +29,18 @@ function App() {
 
   useEffect(() => {
     filterAndSortMessages();
+    updateAvailableCategories();
   }, [messages, activeFilter]);
+
+  useEffect(() => {
+    filterAndSortMessages();
+  }, [categoryFilter, contentNameSearch]);
+
+  const updateAvailableCategories = () => {
+    const filtered = messages.filter(msg => msg.message_type === activeFilter);
+    const categories = [...new Set(filtered.map(msg => msg.context_category))].sort();
+    setAvailableCategories(categories);
+  };
 
   const fetchMessages = async () => {
     setLoading(true);
@@ -43,7 +57,18 @@ function App() {
   };
 
   const filterAndSortMessages = () => {
-    const filtered = messages.filter(msg => msg.message_type === activeFilter);
+    let filtered = messages.filter(msg => msg.message_type === activeFilter);
+
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(msg => msg.context_category === categoryFilter);
+    }
+
+    if (contentNameSearch.trim()) {
+      const searchLower = contentNameSearch.toLowerCase().trim();
+      filtered = filtered.filter(msg =>
+        msg.content_name.toLowerCase().includes(searchLower)
+      );
+    }
 
     if (activeFilter === 'broadcast') {
       const sorted = filtered.sort((a, b) => {
@@ -198,7 +223,11 @@ function App() {
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div className="flex gap-2">
                 <button
-                  onClick={() => setActiveFilter('broadcast')}
+                  onClick={() => {
+                    setActiveFilter('broadcast');
+                    setCategoryFilter('all');
+                    setContentNameSearch('');
+                  }}
                   className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
                     activeFilter === 'broadcast'
                       ? 'bg-blue-600 text-white shadow-md'
@@ -208,7 +237,11 @@ function App() {
                   Broadcast
                 </button>
                 <button
-                  onClick={() => setActiveFilter('funnel_content')}
+                  onClick={() => {
+                    setActiveFilter('funnel_content');
+                    setCategoryFilter('all');
+                    setContentNameSearch('');
+                  }}
                   className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
                     activeFilter === 'funnel_content'
                       ? 'bg-blue-600 text-white shadow-md'
@@ -235,6 +268,47 @@ function App() {
                   Create New Message
                 </button>
               </div>
+            </div>
+
+            <div className="mb-6 bg-white rounded-lg shadow p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter by Category
+                  </label>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All Categories</option>
+                    {availableCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search by Content Name
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      value={contentNameSearch}
+                      onChange={(e) => setContentNameSearch(e.target.value)}
+                      placeholder="Search content name..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-3 text-sm text-gray-600">
+              Showing {filteredMessages.length} message{filteredMessages.length !== 1 ? 's' : ''}
             </div>
 
             {loading ? (
