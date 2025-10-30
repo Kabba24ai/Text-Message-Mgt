@@ -47,11 +47,12 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
         message_type: defaultType
       });
     }
-  }, [message, mode, isOpen]);
+  }, [message, mode, isOpen, messageChannel]);
 
   const fetchCategories = async () => {
+    const tableName = messageChannel === 'email' ? 'email_categories' : 'categories';
     const { data, error } = await supabase
-      .from('categories')
+      .from(tableName)
       .select('name')
       .order('name');
 
@@ -69,8 +70,9 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
     }
 
     setCreatingCategory(true);
+    const tableName = messageChannel === 'email' ? 'email_categories' : 'categories';
     const { error } = await supabase
-      .from('categories')
+      .from(tableName)
       .insert([{
         name: newCategoryName.trim(),
         description: newCategoryDescription.trim() || null

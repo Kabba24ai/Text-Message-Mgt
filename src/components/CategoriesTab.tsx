@@ -16,15 +16,17 @@ export function CategoriesTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
+  const [categoryType, setCategoryType] = useState<'sms' | 'email'>('sms');
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [categoryType]);
 
   const fetchCategories = async () => {
     setLoading(true);
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
     const { data, error } = await supabase
-      .from('categories')
+      .from(tableName)
       .select('*')
       .order('name');
 
@@ -42,8 +44,9 @@ export function CategoriesTab() {
       return;
     }
 
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
     const { error } = await supabase
-      .from('categories')
+      .from(tableName)
       .insert([{
         name: formData.name.trim(),
         description: formData.description.trim() || null
@@ -65,8 +68,9 @@ export function CategoriesTab() {
       return;
     }
 
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
     const { error } = await supabase
-      .from('categories')
+      .from(tableName)
       .update({
         name: formData.name.trim(),
         description: formData.description.trim() || null,
@@ -87,8 +91,9 @@ export function CategoriesTab() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
     const { error } = await supabase
-      .from('categories')
+      .from(tableName)
       .delete()
       .eq('id', id);
 
@@ -134,6 +139,41 @@ export function CategoriesTab() {
           <Plus className="w-4 h-4" />
           New Category
         </button>
+      </div>
+
+      <div className="px-6 pt-4 pb-2 border-b border-gray-200">
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setCategoryType('sms');
+              setEditingId(null);
+              setIsCreating(false);
+              setFormData({ name: '', description: '' });
+            }}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+              categoryType === 'sms'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+            }`}
+          >
+            SMS Categories
+          </button>
+          <button
+            onClick={() => {
+              setCategoryType('email');
+              setEditingId(null);
+              setIsCreating(false);
+              setFormData({ name: '', description: '' });
+            }}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+              categoryType === 'email'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+            }`}
+          >
+            Email Categories
+          </button>
+        </div>
       </div>
 
       <div className="p-6">
