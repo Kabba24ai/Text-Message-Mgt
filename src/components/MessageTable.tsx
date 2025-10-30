@@ -88,7 +88,7 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
               Content Name
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {messageType === 'email_broadcast' || messageType === 'email_funnel_content' ? 'Subject / Content' : 'Content'}
+              {messageType === 'email_broadcast' || messageType === 'email_funnel_content' ? 'Subject' : 'Content'}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
               Created
