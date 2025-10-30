@@ -1,8 +1,8 @@
-# CRM Automated Funnel Module - Development Prompt
+# Sales Funnel Automation Module - Development Prompt
 
 ## Project Overview
 
-Build a comprehensive CRM and Automated Sales Funnel management system for a rental equipment business. This module is a **companion to an existing Message Management system** and will consume message content from that system to power automated customer communications.
+Build a **Sales Funnel Automation Management System** that integrates with an existing CRM and Message Management system. This module allows you to create automated, multi-step communication funnels that send SMS and email messages to customers based on triggers and schedules.
 
 ## Critical Integration Requirements
 
@@ -21,11 +21,19 @@ This project **MUST integrate with an existing Message Management module** that 
 
 **IMPORTANT:** When building funnel steps, you will SELECT messages from these existing tables. DO NOT create new message content - only reference existing message IDs from the Message Management system.
 
+### Existing CRM System
+Your existing CRM already has:
+- Customer database
+- Rental management system
+- Equipment tracking
+
+This module will **integrate with but not replace** those systems. You'll reference customer and rental data when needed for enrollments and triggers.
+
 ### Database Schema Already Available
 
 The following tables are **ALREADY CREATED** in the Supabase database:
 
-#### CRM Tables (Ready to Use)
+#### CRM Tables (Already in Use - Reference Only)
 1. **customers** - Customer contact information
    - id, first_name, last_name, email, phone, notes, created_at, updated_at
 
@@ -39,7 +47,7 @@ The following tables are **ALREADY CREATED** in the Supabase database:
 4. **rental_items** - Line items for rentals
    - id, rental_id (FK), equipment_id (FK), quantity, unit_price, created_at
 
-#### Funnel Automation Tables (Ready to Use)
+#### Funnel Automation Tables (Ready to Use - Your Focus)
 5. **sales_funnels** - Funnel definitions
    - id, name, description, is_active, created_at, updated_at
 
@@ -59,308 +67,547 @@ The following tables are **ALREADY CREATED** in the Supabase database:
 
 ## Core Features to Build
 
-### 1. Customer Management (CRM)
-Create a full-featured customer management interface:
+### 1. Sales Funnel Builder (Primary Feature)
+Create a comprehensive funnel configuration and management interface:
 
-**Customer List View:**
-- Searchable/filterable table of all customers
-- Display: name, email, phone, rental count
-- Sort by: name, email, date created, rental activity
-- Quick actions: Edit, Delete, View Rentals
-- "Add New Customer" button
-
-**Customer Detail/Edit Modal:**
-- Form fields: first_name, last_name, email, phone, notes
-- Validation: email format, required fields
-- Save to `customers` table
-- Display customer's rental history
-- Show active funnel enrollments
-
-**Customer Card/Dashboard:**
-- Customer summary information
-- Recent rental activity
-- Active funnel enrollments with progress
-- Total lifetime value (sum of rental amounts)
-
-### 2. Equipment Management
-Create equipment catalog management:
-
-**Equipment List View:**
-- Searchable table with category filter
-- Display: name, category, description preview
-- Sort by: name, category, date created
-- Quick actions: Edit, Delete, View Details
-- "Add New Equipment" button
-
-**Equipment Form Modal:**
-- Fields: name, category, description, instructions_url, notes
-- Category dropdown (auto-populate from existing equipment)
-- YouTube/instructions URL validation
-- Save to `equipment` table
-
-**Equipment Detail View:**
-- Full equipment information
-- Instructions/video embed if URL provided
-- Rental history (how many times rented)
-- Currently rented status
-
-### 3. Rental Management
-Create rental transaction management:
-
-**Rental List View:**
-- Filterable by status (pending, active, completed, cancelled)
-- Display: customer name, rental date, return date, status, total amount
-- Sort by: rental date, return date, status, amount
-- Status badges with color coding
-- Quick actions: Edit, View Details, Change Status
-- "Create New Rental" button
-
-**Rental Creation/Edit Form:**
-- **Step 1: Select Customer**
-  - Dropdown or searchable customer selector
-  - "Create New Customer" quick-add option
-
-- **Step 2: Select Equipment**
-  - Multi-select equipment with quantities
-  - Each item shows: name, quantity input, unit price input
-  - Subtotal per line item
-  - "Add Equipment" button to add more items
-
-- **Step 3: Rental Details**
-  - Rental date (date picker)
-  - Return date (date picker)
-  - Status dropdown
-  - Notes textarea
-  - Total amount (auto-calculated from line items)
-
-- **Save Logic:**
-  - Insert into `rentals` table
-  - Insert all items into `rental_items` table
-  - **TRIGGER FUNNEL ENROLLMENT** (if active funnels exist)
-
-**Rental Detail View:**
-- Customer information with link to customer
-- Rental dates and status
-- List of rented equipment with quantities and prices
-- Timeline showing:
-  - Rental created date
-  - Status changes
-  - Messages sent (from funnel executions)
-- "Change Status" button
-- "Add to Funnel" button (manual enrollment)
-
-### 4. Sales Funnel Builder
-Create visual funnel configuration interface:
-
-**Funnel List View:**
-- List all sales funnels
-- Display: name, description, active status, step count
-- Toggle active/inactive status
+#### Funnel List View
+- Display all sales funnels in a table or card layout
+- Show: name, description, active status (toggle), step count, enrollment count
+- Active/Inactive toggle switch (updates `is_active` field)
 - Quick actions: Edit, Duplicate, Delete, View Analytics
 - "Create New Funnel" button
+- Filter by: Active/Inactive status
+- Sort by: name, created date, enrollment count
 
-**Funnel Builder/Editor:**
-- **Funnel Details Section:**
-  - Name input
-  - Description textarea
-  - Active toggle switch
+#### Funnel Builder/Editor
+A comprehensive form/interface to create and edit funnels:
 
-- **Funnel Steps Section (Visual Timeline):**
-  - Display steps in order (1, 2, 3, etc.)
-  - Each step card shows:
-    - Step number
-    - Trigger condition
-    - Delay (days)
-    - Message type (SMS/Email icon)
-    - Message preview (first 100 chars)
-    - Edit and Delete buttons
+**Funnel Details Section:**
+- Name input (required, unique)
+- Description textarea (optional)
+- Active status toggle (is_active boolean)
+- Save funnel to `sales_funnels` table
 
-- **Add Step Modal:**
-  - Step number (auto-increments)
-  - Trigger condition dropdown:
-    - "Rental Created" (enrollment trigger)
-    - "Rental Active"
-    - "Before Return Date"
-    - "After Return Date"
-    - "Custom"
-  - Delay in days (number input, 0 = immediate)
-  - Message type radio: SMS or Email
-  - **Message Selector:**
-    - **CRITICAL:** Dropdown populated from existing messages
-    - For SMS: Query `text_messages` WHERE `message_type = 'funnel_content'`
-    - For Email: Query `email_messages` WHERE `message_type = 'email_funnel_content'`
-    - Display: category + content_name (e.g., "Welcome / Day 1 Check-in")
-    - Show message preview when selected
-  - Save to `funnel_steps` table
+**Funnel Steps Section (Visual Timeline):**
+Display steps as a visual timeline or ordered list:
+- Steps numbered sequentially (1, 2, 3, etc.)
+- Each step card/row displays:
+  - **Step number badge**
+  - **Trigger condition** (rental_created, rental_active, before_return, after_return, custom)
+  - **Delay** (e.g., "0 days" = immediate, "3 days" = 3 days after trigger)
+  - **Message type icon** (SMS icon or Email icon)
+  - **Message preview:**
+    - Category / Content Name
+    - First 100 characters of message content
+  - **Action buttons:** Edit Step, Delete Step, Move Up/Down (reorder)
 
-**Funnel Testing/Preview:**
-- Visual representation of the funnel timeline
-- Show example: "Customer rents on Day 0, receives messages on Day 0, 1, 3, 7"
-- Preview all messages in sequence
-- Simulate funnel execution
+- "Add Step" button to create new steps
+- Drag-and-drop to reorder steps (optional enhancement)
+- Visual timeline showing timing (Day 0, Day 1, Day 3, etc.)
 
-### 5. Enrollment Management Dashboard
-Track and manage customer funnel enrollments:
+#### Add/Edit Funnel Step Modal
+When adding or editing a step, show a modal form with:
 
-**Active Enrollments View:**
-- List of all active enrollments
-- Display: customer name, funnel name, enrolled date, progress
-- Progress bar showing completed vs pending steps
-- Filter by: funnel, customer, status
-- Quick actions: View Details, Pause, Cancel, Resume
+**Step Configuration:**
+- **Step Number** (integer input, auto-suggested as next number)
+- **Trigger Condition** (dropdown):
+  - "Rental Created" - When customer creates a rental (enrollment trigger)
+  - "Rental Active" - When rental status becomes active
+  - "Before Return Date" - X days before return date
+  - "After Return Date" - X days after return date
+  - "Custom" - Manual trigger only
 
-**Enrollment Detail View:**
-- Customer and rental information
+- **Delay in Days** (number input, 0 or positive):
+  - 0 = Send immediately when trigger fires
+  - 1+ = Wait X days after trigger
+  - Help text: "How many days after the trigger should this message be sent?"
+
+- **Message Type** (radio buttons):
+  - SMS (shows text message icon)
+  - Email (shows email icon)
+
+- **Message Selector** (**CRITICAL - Core Integration Point**):
+  - Dropdown populated from existing messages based on selected type
+  - **For SMS:** Query `text_messages` WHERE `message_type = 'funnel_content'`
+  - **For Email:** Query `email_messages` WHERE `message_type = 'email_funnel_content'`
+  - Display format: `{context_category} / {content_name}`
+    - Example: "Welcome Series / Day 1 Check-in"
+  - When message selected, show preview:
+    - For SMS: Show full content (character count)
+    - For Email: Show subject and first 200 chars of content
+  - Link to open Message Management module (optional)
+
+- Save button creates/updates entry in `funnel_steps` table
+
+**Validation:**
+- Ensure message_id exists in the appropriate table
+- Prevent duplicate step numbers within same funnel
+- Require all fields to be filled
+
+#### Funnel Testing/Preview Mode
+Visual representation to understand the funnel flow:
+- Timeline visualization showing:
+  - Day 0 (trigger): Rental Created
+  - Day 0 (immediate): Welcome SMS sent
+  - Day 1: Check-in Email sent
+  - Day 3: Equipment Tips SMS sent
+  - Day 7: Feedback Request Email sent
+- Full message previews for each step
+- Simulate button to test funnel logic
+- Shows what would happen if a customer enrolled today
+
+#### Funnel Duplication
+- "Duplicate Funnel" button
+- Creates copy with name "{Original Name} (Copy)"
+- Copies all funnel steps
+- Set is_active = false by default
+- Allows quick creation of variations
+
+### 2. Enrollment Management Dashboard
+Track and manage customer enrollments in funnels:
+
+#### Active Enrollments View
+- List/table of all customer funnel enrollments
+- Display columns:
+  - Customer name (from customers table via join)
+  - Funnel name (from sales_funnels table)
+  - Enrolled date
+  - Status (active, completed, paused, cancelled)
+  - Progress: "Step 3 of 7" or progress bar
+  - Actions: View Details, Pause, Resume, Cancel
+
+- Filters:
+  - By funnel (dropdown)
+  - By status (active, completed, paused, cancelled)
+  - By customer (search)
+  - Date range (enrolled date)
+
+- Sort by: enrolled date, customer name, funnel name, progress
+
+- Statistics cards at top:
+  - Total active enrollments
+  - Total completed enrollments
+  - Messages sent today
+  - Pending messages (scheduled)
+
+#### Enrollment Detail View
+Detailed view of a single customer's enrollment:
+
+**Header Section:**
+- Customer name and contact info (link to CRM)
+- Rental information (link to rental in existing CRM)
 - Funnel name and description
 - Enrollment date and status
-- **Step Execution Timeline:**
-  - List all funnel steps
-  - For each step show:
-    - Status badge (pending, sent, failed, skipped)
-    - Scheduled date
-    - Executed date (if sent)
-    - Message preview
-    - Resend button (if failed)
-- Manual controls: Pause, Resume, Cancel enrollment
+- Actions: Pause, Resume, Cancel, Delete
 
-**Pending Executions Queue:**
-- List of all pending funnel step executions
-- Display: customer, funnel name, step number, scheduled date, message type
-- Sort by scheduled date (soonest first)
-- Countdown timers for upcoming sends
-- Manual trigger option for testing
+**Step Execution Timeline:**
+Visual timeline or list showing all funnel steps and their execution status:
 
-### 6. Automation Engine (Backend Logic)
-**This can be implemented as edge functions or scheduled tasks**
+For each step show:
+- Step number and message type icon
+- Trigger condition and delay
+- Message preview (category/name + first 100 chars)
+- **Execution status badge:**
+  - Pending (gray) - scheduled but not sent
+  - Sent (green) - successfully executed
+  - Failed (red) - error occurred
+  - Skipped (yellow) - manually skipped or enrollment cancelled before execution
+- **Dates:**
+  - Scheduled date (when it should send)
+  - Executed date (when it actually sent)
+  - Time until send (countdown for pending)
+- **Actions:**
+  - Resend button (if failed)
+  - Skip button (if pending)
+  - View sent message details (if sent)
 
-**Automatic Enrollment Trigger:**
-- When a new rental is created (status = 'pending' or 'active')
-- Check for active funnels (is_active = true)
-- For each active funnel:
-  - Create entry in `customer_funnel_enrollments`
-  - Get all funnel steps WHERE trigger_condition = 'rental_created'
-  - For each matching step:
-    - Calculate scheduled_date (rental_date + delay_days)
-    - Create entry in `funnel_step_executions`
+**Status Controls:**
+- **Pause Enrollment:** Stop all pending executions
+- **Resume Enrollment:** Restart with adjusted schedule
+- **Cancel Enrollment:** Mark cancelled and skip all pending steps
+- **Complete Manually:** Mark as completed
 
-**Scheduled Message Execution:**
-- Query `funnel_step_executions` WHERE status = 'pending' AND scheduled_date <= NOW()
-- For each pending execution:
-  - Get the message content from `text_messages` or `email_messages` using message_id
-  - **SEND MESSAGE** (for MVP, just log and mark as sent)
-  - Update executed_date and status = 'sent'
-  - Log any errors and set status = 'failed'
+#### Pending Executions Queue
+Dedicated view for upcoming/pending message sends:
 
-**Status-Based Triggers:**
-- When rental status changes:
-  - Check funnel steps for matching trigger_conditions
-  - Schedule appropriate executions
+- Table of all `funnel_step_executions` WHERE status = 'pending'
+- Display columns:
+  - Customer name
+  - Funnel name
+  - Step number
+  - Message type (SMS/Email icon)
+  - Message preview
+  - Scheduled date/time
+  - Time until send (countdown: "in 2 hours", "in 3 days")
+  - Actions: Send Now (manual trigger), Skip, Cancel
 
-**Before/After Return Triggers:**
-- Daily cron job:
-  - Query rentals with return_date approaching
-  - Check for funnel steps with 'before_return' trigger
-  - Schedule executions based on delay_days
+- Sort by: scheduled_date (ascending - soonest first)
+- Filter by: message type, funnel, date range
+
+- "Send All Due Now" button (batch process overdue executions)
+- Auto-refresh every minute to update countdowns
+
+#### Manual Enrollment Interface
+Form to manually enroll a customer in a funnel:
+
+- **Customer Selector:** Dropdown or search from customers table
+- **Funnel Selector:** Dropdown of active funnels (is_active = true)
+- **Reference Rental:** Optional dropdown of customer's rentals
+- **Enrollment Date:** Date picker (defaults to today)
+- **Start Immediately:** Checkbox to calculate scheduled dates from now
+- Save creates entry in `customer_funnel_enrollments` and generates all `funnel_step_executions`
+
+### 3. Automation Engine (Backend Logic)
+**This can be implemented as edge functions, serverless functions, or scheduled tasks**
+
+#### Automatic Enrollment Trigger
+Function that runs when a new rental is created:
+
+```typescript
+// Pseudo-code for enrollment logic
+async function enrollCustomerInFunnels(rentalId: string) {
+  // 1. Get rental details
+  const rental = await supabase
+    .from('rentals')
+    .select('*, customer_id, rental_date, return_date')
+    .eq('id', rentalId)
+    .single();
+
+  // 2. Find all active funnels
+  const { data: funnels } = await supabase
+    .from('sales_funnels')
+    .select('*')
+    .eq('is_active', true);
+
+  // 3. For each active funnel
+  for (const funnel of funnels) {
+    // 4. Create enrollment
+    const { data: enrollment } = await supabase
+      .from('customer_funnel_enrollments')
+      .insert({
+        customer_id: rental.customer_id,
+        rental_id: rental.id,
+        funnel_id: funnel.id,
+        enrolled_at: new Date().toISOString(),
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    // 5. Get funnel steps with 'rental_created' trigger
+    const { data: steps } = await supabase
+      .from('funnel_steps')
+      .select('*')
+      .eq('funnel_id', funnel.id)
+      .eq('trigger_condition', 'rental_created');
+
+    // 6. Create step executions
+    for (const step of steps) {
+      const scheduledDate = new Date(rental.rental_date);
+      scheduledDate.setDate(scheduledDate.getDate() + step.delay_days);
+
+      await supabase
+        .from('funnel_step_executions')
+        .insert({
+          enrollment_id: enrollment.id,
+          funnel_step_id: step.id,
+          scheduled_date: scheduledDate.toISOString(),
+          status: 'pending'
+        });
+    }
+  }
+}
+```
+
+#### Scheduled Message Execution
+Cron job or scheduled function that runs periodically (e.g., every 5 minutes):
+
+```typescript
+// Pseudo-code for execution logic
+async function executeScheduledMessages() {
+  // 1. Find all pending executions that are due
+  const { data: executions } = await supabase
+    .from('funnel_step_executions')
+    .select(`
+      *,
+      enrollment:customer_funnel_enrollments(
+        *,
+        customer:customers(*)
+      ),
+      funnel_step:funnel_steps(*)
+    `)
+    .eq('status', 'pending')
+    .lte('scheduled_date', new Date().toISOString());
+
+  // 2. Process each execution
+  for (const execution of executions) {
+    try {
+      // 3. Get the message content
+      const messageType = execution.funnel_step.message_type;
+      const messageId = execution.funnel_step.message_id;
+
+      let message;
+      if (messageType === 'sms') {
+        const { data } = await supabase
+          .from('text_messages')
+          .select('*')
+          .eq('id', messageId)
+          .single();
+        message = data;
+      } else {
+        const { data } = await supabase
+          .from('email_messages')
+          .select('*')
+          .eq('id', messageId)
+          .single();
+        message = data;
+      }
+
+      // 4. Send the message
+      // For MVP: Log the message (replace with actual SMS/Email API)
+      console.log('Sending message:', {
+        to: execution.enrollment.customer.phone || execution.enrollment.customer.email,
+        type: messageType,
+        content: message.content
+      });
+
+      // 5. Mark as sent
+      await supabase
+        .from('funnel_step_executions')
+        .update({
+          executed_date: new Date().toISOString(),
+          status: 'sent'
+        })
+        .eq('id', execution.id);
+
+    } catch (error) {
+      // 6. Mark as failed
+      await supabase
+        .from('funnel_step_executions')
+        .update({
+          status: 'failed'
+        })
+        .eq('id', execution.id);
+
+      console.error('Failed to send message:', error);
+    }
+  }
+}
+```
+
+#### Status-Based Triggers
+Function that runs when rental status changes:
+
+```typescript
+async function handleRentalStatusChange(rentalId: string, newStatus: string) {
+  // Map status to trigger condition
+  const triggerMap = {
+    'active': 'rental_active',
+    'completed': 'after_return',
+    // Add more mappings as needed
+  };
+
+  const triggerCondition = triggerMap[newStatus];
+  if (!triggerCondition) return;
+
+  // Find enrollments for this rental
+  const { data: enrollments } = await supabase
+    .from('customer_funnel_enrollments')
+    .select('*')
+    .eq('rental_id', rentalId)
+    .eq('status', 'active');
+
+  for (const enrollment of enrollments) {
+    // Find steps with matching trigger
+    const { data: steps } = await supabase
+      .from('funnel_steps')
+      .select('*')
+      .eq('funnel_id', enrollment.funnel_id)
+      .eq('trigger_condition', triggerCondition);
+
+    // Create executions
+    for (const step of steps) {
+      const scheduledDate = new Date();
+      scheduledDate.setDate(scheduledDate.getDate() + step.delay_days);
+
+      await supabase
+        .from('funnel_step_executions')
+        .insert({
+          enrollment_id: enrollment.id,
+          funnel_step_id: step.id,
+          scheduled_date: scheduledDate.toISOString(),
+          status: 'pending'
+        });
+    }
+  }
+}
+```
+
+#### Before/After Return Date Triggers
+Daily cron job to schedule messages based on return dates:
+
+```typescript
+async function scheduleReturnDateMessages() {
+  // This would run daily at midnight
+
+  // Find all active enrollments with rentals
+  const { data: enrollments } = await supabase
+    .from('customer_funnel_enrollments')
+    .select(`
+      *,
+      rental:rentals(*)
+    `)
+    .eq('status', 'active')
+    .not('rental_id', 'is', null);
+
+  for (const enrollment of enrollments) {
+    const returnDate = new Date(enrollment.rental.return_date);
+    const today = new Date();
+
+    // Find 'before_return' steps
+    const { data: beforeSteps } = await supabase
+      .from('funnel_steps')
+      .select('*')
+      .eq('funnel_id', enrollment.funnel_id)
+      .eq('trigger_condition', 'before_return');
+
+    for (const step of beforeSteps) {
+      const scheduledDate = new Date(returnDate);
+      scheduledDate.setDate(scheduledDate.getDate() - step.delay_days);
+
+      // Only schedule if date is in the future and not already scheduled
+      if (scheduledDate > today) {
+        // Check if already scheduled
+        const { data: existing } = await supabase
+          .from('funnel_step_executions')
+          .select('id')
+          .eq('enrollment_id', enrollment.id)
+          .eq('funnel_step_id', step.id)
+          .single();
+
+        if (!existing) {
+          await supabase
+            .from('funnel_step_executions')
+            .insert({
+              enrollment_id: enrollment.id,
+              funnel_step_id: step.id,
+              scheduled_date: scheduledDate.toISOString(),
+              status: 'pending'
+            });
+        }
+      }
+    }
+
+    // Similar logic for 'after_return' steps
+  }
+}
+```
+
+### 4. Analytics Dashboard (Optional Enhancement)
+Basic reporting and metrics:
+
+#### Funnel Performance View
+- List of funnels with metrics:
+  - Total enrollments
+  - Active enrollments
+  - Completed enrollments
+  - Messages sent
+  - Messages pending
+  - Success rate (sent vs failed)
+
+#### Message Performance
+- Which messages are most sent
+- Which messages fail most often
+- Average time between scheduled and executed
+
+#### Customer Engagement
+- Most engaged customers (most enrollments)
+- Customers with active enrollments
+- Customers who completed funnels
 
 ## UI/UX Requirements
 
 ### Navigation Structure
-Create a tabbed or sidebar navigation with:
-- **Dashboard** (Overview with key metrics)
-- **Customers** (CRM)
-- **Equipment** (Catalog)
-- **Rentals** (Transactions)
-- **Funnels** (Sales Funnel Builder)
-- **Enrollments** (Active Automations)
-- **Analytics** (Future: reporting)
+Create a clean, focused interface with:
+- **Funnels** - Main view (Funnel list and builder)
+- **Enrollments** - Enrollment management
+- **Queue** - Pending executions
+- **Analytics** - Performance metrics (optional)
+
+Or use a tabbed interface:
+- Tab 1: Manage Funnels
+- Tab 2: Active Enrollments
+- Tab 3: Execution Queue
+- Tab 4: Analytics
 
 ### Design Guidelines
-- Use the same design system as the Message Management module
-- Color scheme: Professional, clean, modern
-  - Primary: Blue tones for actions
-  - Success: Green for completed/active
-  - Warning: Orange for pending
+- Match the design system of your existing Message Management module
+- Color scheme:
+  - Primary: Blue for actions and navigation
+  - Success: Green for sent/completed/active
+  - Warning: Orange/Yellow for pending/paused
   - Danger: Red for failed/cancelled
+  - Neutral: Gray for inactive
 - Responsive design (mobile-friendly)
 - Loading states for all async operations
-- Empty states with helpful CTAs
-- Confirmation dialogs for destructive actions
+- Empty states with helpful CTAs ("No funnels yet. Create your first funnel!")
+- Confirmation dialogs for destructive actions (delete, cancel)
+
+### Key Visual Elements
+- **Status badges** with colors (Active, Pending, Sent, Failed, etc.)
+- **Progress indicators** for enrollments (progress bars or "3 of 7 steps")
+- **Timeline visualization** for funnel steps
+- **Icon usage** for message types (SMS icon, Email icon)
+- **Countdown timers** for pending executions ("Sends in 2 hours")
+- **Message previews** (truncated with "Read more" expansion)
 
 ### Key Interactions
-- **Drag-and-drop** for reordering funnel steps (nice-to-have)
-- **Inline editing** where appropriate (customer notes, equipment details)
-- **Quick actions** on hover (edit, delete icons)
-- **Search/filter** persist across page reloads
+- **Inline editing** for funnel names and descriptions
+- **Toggle switches** for active/inactive status
+- **Drag-and-drop** for reordering steps (optional)
+- **Modal forms** for creating/editing steps
+- **Hover actions** for quick edit/delete
+- **Search and filter** with URL persistence
 - **Toast notifications** for success/error feedback
+- **Loading spinners** during async operations
 
 ## Technical Requirements
 
-### Technology Stack (Match Existing Module)
+### Technology Stack
 - **Frontend:** React 18 with TypeScript
 - **Styling:** Tailwind CSS
 - **Build Tool:** Vite
 - **Database:** Supabase (PostgreSQL)
 - **Icons:** Lucide React
-- **State Management:** React Hooks (useState, useEffect)
-- **Date Handling:** Native JS Date or date-fns (if needed)
+- **State Management:** React Hooks (useState, useEffect, useContext if needed)
+- **Date Handling:** Native JS Date or date-fns library
+- **Routing:** React Router (optional, if multi-page)
 
 ### Supabase Integration
+
+**Environment Variables (.env file):**
+```
+VITE_SUPABASE_URL=https://tpgenpsfhlochdccpbje.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwZ2VucHNmaGxvY2hkY2NwYmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MTQ1MzMsImV4cCI6MjA3NzI5MDUzM30.BE4kH2mP2XBoZtDMJdL4X9eP9Rheynt4oIQdYkWEJBs
+```
+
+**Supabase Client Setup:**
 ```typescript
-// Use the same Supabase credentials as Message Management
+// src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://tpgenpsfhlochdccpbje.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwZ2VucHNmaGxvY2hkY2NwYmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MTQ1MzMsImV4cCI6MjA3NzI5MDUzM30.BE4kH2mP2XBoZtDMJdL4X9eP9Rheynt4oIQdYkWEJBs';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
 ### Type Definitions
-Define TypeScript types for all database tables:
+
 ```typescript
-export type Customer = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  phone: string;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-};
+// src/lib/types.ts
 
-export type Equipment = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  instructions_url: string;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Rental = {
-  id: string;
-  customer_id: string;
-  rental_date: string;
-  return_date: string;
-  status: 'pending' | 'active' | 'completed' | 'cancelled';
-  total_amount: number;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type RentalItem = {
-  id: string;
-  rental_id: string;
-  equipment_id: string;
-  quantity: number;
-  unit_price: number;
-  created_at: string;
-};
-
+// Funnel Automation Types
 export type SalesFunnel = {
   id: string;
   name: string;
@@ -401,7 +648,31 @@ export type FunnelStepExecution = {
   created_at: string;
 };
 
-// Import existing message types from Message Management
+// Reference Types (from existing systems)
+export type Customer = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Rental = {
+  id: string;
+  customer_id: string;
+  rental_date: string;
+  return_date: string;
+  status: 'pending' | 'active' | 'completed' | 'cancelled';
+  total_amount: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Message Types (from Message Management module)
 export type TextMessage = {
   id: string;
   context_category: string;
@@ -424,185 +695,228 @@ export type EmailMessage = {
 };
 ```
 
-### Data Fetching Patterns
-Use React hooks for data management:
-```typescript
-// Example: Fetch customers with rental counts
-const [customers, setCustomers] = useState<Customer[]>([]);
+### Critical Query Patterns
 
-useEffect(() => {
-  fetchCustomers();
-}, []);
-
-const fetchCustomers = async () => {
-  const { data, error } = await supabase
-    .from('customers')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching customers:', error);
-  } else {
-    setCustomers(data || []);
-  }
-};
-```
-
-### Querying Messages for Funnel Steps
-**CRITICAL PATTERN:** When building funnel steps, always query existing messages:
-
+**Fetching Funnel Content Messages:**
 ```typescript
 // Fetch SMS funnel content messages
-const fetchSMSMessages = async () => {
+const fetchSMSFunnelMessages = async () => {
   const { data, error } = await supabase
     .from('text_messages')
     .select('id, context_category, content_name, content')
     .eq('message_type', 'funnel_content')
     .order('context_category', { ascending: true });
 
+  if (error) {
+    console.error('Error fetching SMS messages:', error);
+    return [];
+  }
   return data || [];
 };
 
 // Fetch Email funnel content messages
-const fetchEmailMessages = async () => {
+const fetchEmailFunnelMessages = async () => {
   const { data, error } = await supabase
     .from('email_messages')
     .select('id, context_category, content_name, subject, content')
     .eq('message_type', 'email_funnel_content')
     .order('context_category', { ascending: true });
 
+  if (error) {
+    console.error('Error fetching email messages:', error);
+    return [];
+  }
   return data || [];
 };
-
-// Use in funnel step form
-<select value={selectedMessageId} onChange={handleMessageChange}>
-  {messages.map(msg => (
-    <option key={msg.id} value={msg.id}>
-      {msg.context_category} / {msg.content_name}
-    </option>
-  ))}
-</select>
 ```
 
-### Joining Data for Display
-Use Supabase's query capabilities to fetch related data:
-
+**Fetching Funnel with Steps:**
 ```typescript
-// Fetch rental with customer and items
-const { data, error } = await supabase
-  .from('rentals')
-  .select(`
-    *,
-    customer:customers(*),
-    rental_items(
+const fetchFunnelWithSteps = async (funnelId: string) => {
+  const { data, error } = await supabase
+    .from('sales_funnels')
+    .select(`
       *,
-      equipment:equipment(*)
-    )
-  `)
-  .eq('id', rentalId)
-  .single();
+      funnel_steps(*)
+    `)
+    .eq('id', funnelId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching funnel:', error);
+    return null;
+  }
+  return data;
+};
+```
+
+**Fetching Enrollments with Related Data:**
+```typescript
+const fetchEnrollmentsWithDetails = async () => {
+  const { data, error } = await supabase
+    .from('customer_funnel_enrollments')
+    .select(`
+      *,
+      customer:customers(*),
+      funnel:sales_funnels(*),
+      rental:rentals(*)
+    `)
+    .eq('status', 'active')
+    .order('enrolled_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching enrollments:', error);
+    return [];
+  }
+  return data || [];
+};
+```
+
+**Fetching Step Executions for an Enrollment:**
+```typescript
+const fetchExecutionsForEnrollment = async (enrollmentId: string) => {
+  const { data, error } = await supabase
+    .from('funnel_step_executions')
+    .select(`
+      *,
+      funnel_step:funnel_steps(
+        *
+      )
+    `)
+    .eq('enrollment_id', enrollmentId)
+    .order('scheduled_date', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching executions:', error);
+    return [];
+  }
+  return data || [];
+};
 ```
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Week 1)
-- Project setup with Vite + React + TypeScript + Tailwind
+### Phase 1: Foundation (Days 1-2)
+- Project setup: Vite + React + TypeScript + Tailwind
 - Supabase client configuration
 - Type definitions for all tables
 - Basic routing/navigation structure
-- Dashboard with placeholder components
+- Design system setup (colors, components)
 
-### Phase 2: CRM (Week 2)
-- Customer management (list, create, edit, delete)
-- Equipment management (list, create, edit, delete)
-- Basic search and filtering
-- Form validation and error handling
+### Phase 2: Funnel Management (Days 3-5)
+- Funnel list view with active/inactive toggles
+- Create/edit funnel form
+- Funnel detail view
+- Delete funnel with confirmation
+- Basic CRUD operations for funnels
 
-### Phase 3: Rental Management (Week 3)
-- Rental list with filtering
-- Rental creation form (multi-step)
-- Rental detail view
-- Status management
-- Line item calculations
+### Phase 3: Funnel Step Builder (Days 6-9)
+- Step list display in funnel editor
+- Add step modal with all fields
+- Message selector (integration with Message Management)
+- Message preview display
+- Step reordering (move up/down buttons)
+- Edit and delete steps
+- Funnel timeline visualization
 
-### Phase 4: Funnel Builder (Week 4)
-- Funnel list and CRUD
-- Funnel step builder
-- Message selection from existing messages
-- Visual timeline display
-- Step reordering
+### Phase 4: Enrollment Management (Days 10-12)
+- Enrollment list view with filters
+- Enrollment detail view
+- Step execution timeline display
+- Pause/resume/cancel controls
+- Manual enrollment form
+- Progress tracking
 
-### Phase 5: Enrollment & Automation (Week 5)
-- Enrollment dashboard
-- Execution queue viewer
-- Automatic enrollment on rental creation
-- Manual enrollment controls
-- Step execution tracking
+### Phase 5: Execution Queue (Days 13-14)
+- Pending executions list
+- Countdown timers
+- Manual trigger buttons
+- Skip and cancel actions
+- Real-time updates (polling or realtime subscriptions)
 
-### Phase 6: Automation Engine (Week 6)
-- Edge function for scheduled executions
-- Trigger logic implementation
-- Message sending simulation
-- Error handling and retry logic
-- Logging and monitoring
+### Phase 6: Automation Engine (Days 15-18)
+- Auto-enrollment function (triggered on rental creation)
+- Scheduled execution function (cron/edge function)
+- Status change triggers
+- Return date triggers
+- Error handling and logging
+- Testing and debugging
 
-### Phase 7: Polish & Testing (Week 7)
+### Phase 7: Polish & Testing (Days 19-21)
 - Responsive design refinements
-- Loading and empty states
-- Comprehensive error handling
-- Manual testing of all flows
-- Documentation updates
+- Loading states and error handling
+- Empty states with helpful messages
+- Comprehensive testing of all flows
+- Performance optimization
+- Documentation
 
 ## Success Criteria
 
 ### Must Have (MVP)
-- ✅ Full CRUD for Customers, Equipment, Rentals
-- ✅ Multi-step rental creation with line items
-- ✅ Funnel builder with message selection from existing tables
-- ✅ Funnel step management
+- ✅ Create, edit, delete, duplicate funnels
+- ✅ Add/edit/delete/reorder funnel steps
+- ✅ Select messages from existing Message Management tables
+- ✅ Message preview in step builder
+- ✅ View all enrollments with status and progress
+- ✅ View enrollment details with execution timeline
+- ✅ Pause, resume, cancel enrollments
+- ✅ Manual customer enrollment
+- ✅ Pending execution queue view
 - ✅ Automatic enrollment on rental creation
-- ✅ Manual enrollment controls
-- ✅ Execution tracking dashboard
-- ✅ Scheduled execution engine
+- ✅ Scheduled message execution engine
 
 ### Should Have
-- ✅ Search and filtering across all entities
-- ✅ Visual funnel timeline
-- ✅ Enrollment progress tracking
-- ✅ Manual trigger for testing
-- ✅ Pause/resume/cancel enrollments
+- ✅ Funnel duplication
+- ✅ Funnel timeline visualization
+- ✅ Status-based triggers (rental_active, etc.)
 - ✅ Before/after return date triggers
+- ✅ Manual send now for pending messages
+- ✅ Resend failed messages
+- ✅ Search and filter across all views
 
 ### Nice to Have
 - Drag-and-drop step reordering
-- Funnel duplication
-- A/B testing support
 - Analytics dashboard
-- Message performance metrics
-- Customer segmentation
-- Bulk operations
-- CSV import/export
+- A/B testing for funnels
+- Conditional logic (if/then rules)
+- Customer segmentation (enroll specific customers)
+- Bulk enrollment
+- Export reports
+- Real-time updates using Supabase Realtime
 
 ## Key Reminders
 
-1. **DO NOT create new message content** - Always reference existing messages from `text_messages` and `email_messages` tables
-2. **Use the same Supabase project** - Share the database with the Message Management module
-3. **Maintain consistent design** - Match the look and feel of the Message Management module
-4. **Focus on automation** - The core value is automated, triggered communications
-5. **Think long-term** - Build foundation for analytics and reporting
-6. **Test thoroughly** - Ensure enrollment and execution logic is bulletproof
-7. **Handle errors gracefully** - Failed sends shouldn't break the system
-8. **Keep it modular** - Separate concerns for easier maintenance
-9. **Document everything** - Code comments and README for the team
-10. **Security first** - Update RLS policies before production
+1. **DO NOT create new messages** - Always reference existing message IDs from `text_messages` and `email_messages` tables
+2. **Query funnel_content messages only** - Use `message_type = 'funnel_content'` for SMS and `message_type = 'email_funnel_content'` for email
+3. **Use the same Supabase project** - Share the database with Message Management module
+4. **Reference existing CRM data** - Don't recreate customer or rental management
+5. **Focus on automation** - The core value is automated, triggered communications
+6. **Handle errors gracefully** - Failed sends shouldn't break enrollments
+7. **Think scalability** - Design for many customers and many funnels
+8. **Test thoroughly** - Enrollment and execution logic must be bulletproof
+9. **Keep it modular** - Separate concerns for easier maintenance
+10. **Document everything** - Code comments and README for the team
 
 ## Getting Started
 
-Start by creating:
-1. Project structure and configuration
-2. Supabase client and type definitions
-3. Basic navigation and routing
-4. Customer management as the first feature
-5. Build incrementally, testing each feature before moving on
+**Step 1:** Set up the project structure
+```bash
+npm create vite@latest sales-funnel-automation -- --template react-ts
+cd sales-funnel-automation
+npm install
+npm install @supabase/supabase-js lucide-react
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+```
 
-Good luck! Build something amazing! 🚀
+**Step 2:** Configure Tailwind CSS in `tailwind.config.js`
+
+**Step 3:** Create `.env` file with Supabase credentials
+
+**Step 4:** Set up Supabase client and type definitions
+
+**Step 5:** Build the funnel list view as your first feature
+
+**Step 6:** Incrementally add features, testing each before moving on
+
+Good luck building an amazing automation system! 🚀
