@@ -82,7 +82,7 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Content Category
+              Content Cat.
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Content Name
@@ -91,7 +91,7 @@ export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messa
               {messageType === 'email_broadcast' || messageType === 'email_funnel_content' ? 'Subject / Content' : 'Content'}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
-              Created Date
+              Created
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
               {messageType === 'broadcast' || messageType === 'email_broadcast' ? 'Sent Date' : 'Sales Funnels'}
