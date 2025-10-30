@@ -254,92 +254,94 @@ function App() {
 
         {activeTab === 'messages' ? (
           <>
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => {
-                    setActiveFilter('broadcast');
-                    setCategoryFilter('all');
-                    setContentNameSearch('');
-                  }}
-                  className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
-                    activeFilter === 'broadcast'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  SMS Broadcast
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveFilter('funnel_content');
-                    setCategoryFilter('all');
-                    setContentNameSearch('');
-                  }}
-                  className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
-                    activeFilter === 'funnel_content'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  SMS Funnel Content
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveFilter('email_broadcast');
-                    setCategoryFilter('all');
-                    setContentNameSearch('');
-                  }}
-                  className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
-                    activeFilter === 'email_broadcast'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  Email Broadcast
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveFilter('email_funnel_content');
-                    setCategoryFilter('all');
-                    setContentNameSearch('');
-                  }}
-                  className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
-                    activeFilter === 'email_funnel_content'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  Email Funnel Content
-                </button>
-              </div>
+            <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => {
+                      setActiveFilter('broadcast');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
+                      activeFilter === 'broadcast'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                  >
+                    SMS Broadcast
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter('funnel_content');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
+                      activeFilter === 'funnel_content'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                  >
+                    SMS Funnel Content
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter('email_broadcast');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
+                      activeFilter === 'email_broadcast'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                  >
+                    Email Broadcast
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter('email_funnel_content');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
+                      activeFilter === 'email_funnel_content'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                  >
+                    Email Funnel Content
+                  </button>
+                </div>
 
-              <div className="flex gap-2 flex-wrap">
-                {(activeFilter === 'broadcast' || activeFilter === 'funnel_content') && (
+                <div className="flex gap-2 flex-wrap">
+                  {(activeFilter === 'broadcast' || activeFilter === 'funnel_content') && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New SMS Broadcast
+                    </button>
+                  )}
+                  {(activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content') && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New Email Broadcast
+                    </button>
+                  )}
                   <button
-                    onClick={() => setIsBroadcastModalOpen(true)}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md"
+                    onClick={handleCreateNew}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
                   >
-                    <Send className="w-5 h-5" />
-                    Send New SMS Broadcast
+                    <Plus className="w-4 h-4" />
+                    Create New Message
                   </button>
-                )}
-                {(activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content') && (
-                  <button
-                    onClick={() => setIsBroadcastModalOpen(true)}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md"
-                  >
-                    <Send className="w-5 h-5" />
-                    Send New Email Broadcast
-                  </button>
-                )}
-                <button
-                  onClick={handleCreateNew}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create New Message
-                </button>
+                </div>
               </div>
             </div>
 
