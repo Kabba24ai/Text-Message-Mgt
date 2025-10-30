@@ -1,4 +1,4 @@
-import { Trash2, Edit, Copy, Send } from 'lucide-react';
+import { Trash2, CreditCard as Edit, Copy, Send } from 'lucide-react';
 import { TextMessage, EmailMessage } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
