@@ -265,7 +265,7 @@ function App() {
                     }}
                     className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
                       activeFilter === 'broadcast'
-                        ? 'border-blue-600 text-blue-600'
+                        ? 'border-orange-500 text-orange-600'
                         : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                     }`}
                   >
@@ -279,7 +279,7 @@ function App() {
                     }}
                     className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
                       activeFilter === 'funnel_content'
-                        ? 'border-blue-600 text-blue-600'
+                        ? 'border-emerald-500 text-emerald-600'
                         : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                     }`}
                   >
@@ -293,7 +293,7 @@ function App() {
                     }}
                     className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
                       activeFilter === 'email_broadcast'
-                        ? 'border-blue-600 text-blue-600'
+                        ? 'border-blue-500 text-blue-600'
                         : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                     }`}
                   >
@@ -307,7 +307,7 @@ function App() {
                     }}
                     className={`px-4 py-2 text-sm font-medium transition-all border-b-2 ${
                       activeFilter === 'email_funnel_content'
-                        ? 'border-blue-600 text-blue-600'
+                        ? 'border-cyan-500 text-cyan-600'
                         : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                     }`}
                   >
@@ -316,19 +316,37 @@ function App() {
                 </div>
 
                 <div className="flex gap-2 flex-wrap">
-                  {(activeFilter === 'broadcast' || activeFilter === 'funnel_content') && (
+                  {activeFilter === 'broadcast' && (
                     <button
                       onClick={() => setIsBroadcastModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium shadow-sm"
                     >
                       <Send className="w-4 h-4" />
                       Send New SMS Broadcast
                     </button>
                   )}
-                  {(activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content') && (
+                  {activeFilter === 'funnel_content' && (
                     <button
                       onClick={() => setIsBroadcastModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New SMS Broadcast
+                    </button>
+                  )}
+                  {activeFilter === 'email_broadcast' && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New Email Broadcast
+                    </button>
+                  )}
+                  {activeFilter === 'email_funnel_content' && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors font-medium shadow-sm"
                     >
                       <Send className="w-4 h-4" />
                       Send New Email Broadcast
