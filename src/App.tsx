@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, Plus, FolderOpen, Send, Search, Users, Wrench, Calendar } from 'lucide-react';
+import { MessageCircle, Plus, FolderOpen, Send, Search } from 'lucide-react';
 import { supabase, TextMessage, EmailMessage } from './lib/supabase';
 import { MessageTable } from './components/MessageTable';
 import { MessageModal } from './components/MessageModal';
 import { CategoriesTab } from './components/CategoriesTab';
 import { BroadcastModal } from './components/BroadcastModal';
-import { CustomersTab } from './components/CustomersTab';
 
 type FilterType = 'broadcast' | 'funnel_content' | 'email_broadcast' | 'email_funnel_content';
-type TabType = 'messages' | 'categories' | 'customers' | 'equipment' | 'rentals';
+type TabType = 'messages' | 'categories';
 
 function App() {
   const [messages, setMessages] = useState<TextMessage[]>([]);
@@ -228,10 +227,10 @@ function App() {
           <p className="text-gray-600">Manage your SMS and email broadcast and funnel content messages</p>
         </div>
 
-        <div className="mb-6 flex gap-2 border-b border-gray-200 overflow-x-auto">
+        <div className="mb-6 flex gap-2 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('messages')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 ${
               activeTab === 'messages'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -242,7 +241,7 @@ function App() {
           </button>
           <button
             onClick={() => setActiveTab('categories')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 ${
               activeTab === 'categories'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -251,56 +250,9 @@ function App() {
             <FolderOpen className="w-5 h-5" />
             Categories
           </button>
-          <button
-            onClick={() => setActiveTab('customers')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
-              activeTab === 'customers'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            Customers
-          </button>
-          <button
-            onClick={() => setActiveTab('equipment')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
-              activeTab === 'equipment'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Wrench className="w-5 h-5" />
-            Equipment
-          </button>
-          <button
-            onClick={() => setActiveTab('rentals')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
-              activeTab === 'rentals'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Calendar className="w-5 h-5" />
-            Rentals
-          </button>
         </div>
 
-        {activeTab === 'customers' ? (
-          <CustomersTab />
-        ) : activeTab === 'equipment' ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <Wrench className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Equipment Management</h3>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        ) : activeTab === 'rentals' ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Rentals Management</h3>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        ) : activeTab === 'messages' ? (
+        {activeTab === 'messages' ? (
           <>
             <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
