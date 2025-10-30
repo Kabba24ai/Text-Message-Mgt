@@ -134,36 +134,17 @@ function App() {
     setIsModalOpen(true);
   };
 
-  const handleCopy = async (message: TextMessage | EmailMessage) => {
-    const isEmail = 'subject' in message;
-    const tableName = isEmail ? 'email_messages' : 'text_messages';
-
-    const newMessage: any = {
-      context_category: message.context_category,
+  const handleCopy = (message: TextMessage | EmailMessage) => {
+    // Create a copy with updated name
+    const copiedMessage = {
+      ...message,
       content_name: `${message.content_name} (Copy)`,
-      content: message.content,
-      message_type: message.message_type
+      id: undefined // Remove ID so it's treated as a new message
     };
 
-    if (isEmail && 'subject' in message) {
-      newMessage.subject = message.subject;
-    }
-
-    const { error } = await supabase
-      .from(tableName)
-      .insert([newMessage]);
-
-    if (error) {
-      console.error('Error copying message:', error);
-      alert('Failed to copy message');
-    } else {
-      if (isEmail) {
-        fetchEmailMessages();
-      } else {
-        fetchMessages();
-      }
-      alert('Message copied successfully!');
-    }
+    setEditingMessage(copiedMessage as TextMessage | EmailMessage);
+    setModalMode('create');
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {

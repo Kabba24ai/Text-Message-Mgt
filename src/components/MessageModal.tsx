@@ -26,10 +26,8 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
   const [creatingCategory, setCreatingCategory] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchCategories();
-    }
-    if (message && mode === 'edit') {
+    if (message) {
+      // Pre-fill form with message data for both edit and copy modes
       setFormData({
         context_category: message.context_category,
         content_name: message.content_name,
@@ -37,7 +35,7 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
         content: message.content,
         message_type: message.message_type
       });
-    } else {
+    } else if (isOpen) {
       const defaultType = messageChannel === 'email' ? 'email_broadcast' : 'broadcast';
       setFormData({
         context_category: '',
@@ -49,8 +47,15 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
     }
   }, [message, mode, isOpen, messageChannel]);
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen, formData.message_type]);
+
   const fetchCategories = async () => {
-    const tableName = messageChannel === 'email' ? 'email_categories' : 'categories';
+    const isEmailType = formData.message_type === 'email_broadcast' || formData.message_type === 'email_funnel_content';
+    const tableName = isEmailType ? 'email_categories' : 'categories';
     const { data, error } = await supabase
       .from(tableName)
       .select('name')
@@ -70,7 +75,8 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
     }
 
     setCreatingCategory(true);
-    const tableName = messageChannel === 'email' ? 'email_categories' : 'categories';
+    const isEmailType = formData.message_type === 'email_broadcast' || formData.message_type === 'email_funnel_content';
+    const tableName = isEmailType ? 'email_categories' : 'categories';
     const { error } = await supabase
       .from(tableName)
       .insert([{
@@ -103,7 +109,7 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-semibold text-gray-900">
-            {mode === 'create' ? 'Create New Message' : 'Edit Message'}
+            {mode === 'create' && message ? 'Copy Message' : mode === 'create' ? 'Create New Message' : 'Edit Message'}
           </h2>
           <button
             onClick={onClose}
@@ -163,24 +169,20 @@ export function MessageModal({ isOpen, onClose, onSave, message, mode, messageCh
             </label>
             <select
               value={formData.message_type}
-              onChange={(e) => setFormData({ ...formData, message_type: e.target.value as any })}
+              onChange={(e) => {
+                const newMessageType = e.target.value as any;
+                setFormData({ ...formData, message_type: newMessageType, context_category: '' });
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {messageChannel === 'sms' ? (
-                <>
-                  <option value="broadcast">SMS Broadcast</option>
-                  <option value="funnel_content">SMS Funnel Content</option>
-                </>
-              ) : (
-                <>
-                  <option value="email_broadcast">Email Broadcast</option>
-                  <option value="email_funnel_content">Email Funnel Content</option>
-                </>
-              )}
+              <option value="broadcast">SMS Broadcast</option>
+              <option value="funnel_content">SMS Funnel Content</option>
+              <option value="email_broadcast">Email Broadcast</option>
+              <option value="email_funnel_content">Email Funnel Content</option>
             </select>
           </div>
 
-          {messageChannel === 'email' && (
+          {(formData.message_type === 'email_broadcast' || formData.message_type === 'email_funnel_content') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Subject
