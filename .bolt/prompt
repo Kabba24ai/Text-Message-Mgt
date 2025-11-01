@@ -1,5 +1,1697 @@
-For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+# BOLT.NEW COMPLETE PROJECT PROMPT - MESSAGE MANAGEMENT SYSTEM
 
-By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+Copy and paste this entire prompt into Bolt.new to create the complete Message Management System.
 
-Use icons from lucide-react for logos.
+---
+
+## PROJECT OVERVIEW
+
+Build a complete Message Management System for managing SMS and Email broadcast and funnel content messages. This system uses React + TypeScript + Vite + Tailwind CSS + Supabase.
+
+**Project Name:** Message Management
+
+**Key Features:**
+- Create, edit, delete, and send SMS/Email messages
+- Four message types: SMS Broadcast, SMS Funnel Content, Email Broadcast, Email Funnel Content
+- Category management (separate for SMS and Email)
+- Search and filter messages by category and content name
+- Copy/duplicate messages
+- Track sent dates for broadcast messages
+- Beautiful, modern UI with proper responsive design
+
+---
+
+## STEP 1: PROJECT SETUP
+
+Create a new React + TypeScript + Vite project with these exact dependencies:
+
+```json
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "lucide-react": "^0.344.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.18",
+    "eslint": "^9.9.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2"
+  }
+}
+```
+
+---
+
+## STEP 2: ENVIRONMENT VARIABLES
+
+Create `.env` file with these EXACT Supabase credentials:
+
+```
+VITE_SUPABASE_URL=https://tpgenpsfhlochdccpbje.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwZ2VucHNmaGxvY2hkY2NwYmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MTQ1MzMsImV4cCI6MjA3NzI5MDUzM30.BE4kH2mP2XBoZtDMJdL4X9eP9Rheynt4oIQdYkWEJBs
+```
+
+**IMPORTANT:** The database tables already exist in Supabase. Do not attempt to create them.
+
+---
+
+## STEP 3: VITE CONFIGURATION
+
+Update `vite.config.ts`:
+
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  optimizeDeps: {
+    exclude: ['lucide-react'],
+  },
+});
+```
+
+---
+
+## STEP 4: TAILWIND CONFIGURATION
+
+Update `tailwind.config.js`:
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+---
+
+## STEP 5: GLOBAL STYLES
+
+Update `src/index.css`:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+---
+
+## STEP 6: SUPABASE CLIENT & TYPES
+
+Create `src/lib/supabase.ts`:
+
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export type TextMessage = {
+  id: string;
+  context_category: string;
+  content_name: string;
+  content: string;
+  message_type: 'broadcast' | 'funnel_content';
+  created_date: string;
+  sent_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EmailMessage = {
+  id: string;
+  context_category: string;
+  content_name: string;
+  subject: string;
+  content: string;
+  message_type: 'email_broadcast' | 'email_funnel_content';
+  sent_date: string | null;
+  created_at: string;
+};
+
+export type SalesFunnel = {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FunnelContentAssignment = {
+  id: string;
+  funnel_id: string;
+  message_id: string;
+  created_at: string;
+};
+```
+
+---
+
+## STEP 7: MESSAGE TABLE COMPONENT
+
+Create `src/components/MessageTable.tsx`:
+
+```typescript
+import { Trash2, CreditCard as Edit, Copy, Send } from 'lucide-react';
+import { TextMessage, EmailMessage } from '../lib/supabase';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+
+interface MessageTableProps {
+  messages: (TextMessage | EmailMessage)[];
+  onSend: (id: string) => void;
+  onEdit: (message: TextMessage | EmailMessage) => void;
+  onCopy: (message: TextMessage | EmailMessage) => void;
+  onDelete: (id: string) => void;
+  messageType: 'broadcast' | 'funnel_content' | 'email_broadcast' | 'email_funnel_content';
+}
+
+export function MessageTable({ messages, onSend, onEdit, onCopy, onDelete, messageType }: MessageTableProps) {
+  const [funnelAssignments, setFunnelAssignments] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (messageType === 'funnel_content' || messageType === 'email_funnel_content') {
+      fetchFunnelAssignments();
+    }
+  }, [messages, messageType]);
+
+  const fetchFunnelAssignments = async () => {
+    const messageIds = messages.map(m => m.id);
+    if (messageIds.length === 0) return;
+
+    const { data, error } = await supabase
+      .from('funnel_content_assignments')
+      .select(\`
+        message_id,
+        sales_funnels!funnel_content_assignments_funnel_id_fkey(name)
+      \`)
+      .in('message_id', messageIds);
+
+    if (error) {
+      console.error('Error fetching funnel assignments:', error);
+      return;
+    }
+
+    const assignments: Record<string, string[]> = {};
+    data?.forEach((item: any) => {
+      if (!assignments[item.message_id]) {
+        assignments[item.message_id] = [];
+      }
+      if (item.sales_funnels?.name) {
+        assignments[item.message_id].push(item.sales_funnels.name);
+      }
+    });
+    setFunnelAssignments(assignments);
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) {
+      return {
+        date: 'PENDING',
+        time: ''
+      };
+    }
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+    };
+  };
+
+  const truncateContent = (content: string) => {
+    if (content.length <= 120) return content;
+    return content.substring(0, 120) + '...';
+  };
+
+  return (
+    <div className="overflow-x-auto bg-white rounded-lg shadow">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Content Cat.
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Content Name
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {messageType === 'email_broadcast' || messageType === 'email_funnel_content' ? 'Subject' : 'Content'}
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+              Created
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+              {messageType === 'broadcast' || messageType === 'email_broadcast' ? 'Sent Date' : 'Sales Funnels'}
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {messages.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                No messages found
+              </td>
+            </tr>
+          ) : (
+            messages.map((message) => (
+              <tr key={message.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {message.context_category}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {message.content_name}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {(messageType === 'email_broadcast' || messageType === 'email_funnel_content') && 'subject' in message ? (
+                    <div>
+                      <div className="font-semibold text-gray-900 mb-1">{message.subject}</div>
+                      <div>{truncateContent(message.content)}</div>
+                    </div>
+                  ) : (
+                    truncateContent(message.content)
+                  )}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">{formatDate('created_date' in message ? message.created_date : message.created_at).date}</div>
+                    <div className="text-xs text-gray-500">{formatDate('created_date' in message ? message.created_date : message.created_at).time}</div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {messageType === 'broadcast' || messageType === 'email_broadcast' ? (
+                    <div className="text-left">
+                      {!message.sent_date ? (
+                        <div className="text-amber-600 font-semibold">PENDING</div>
+                      ) : (
+                        <>
+                          <div className="font-medium text-gray-900">{formatDate(message.sent_date).date}</div>
+                          <div className="text-xs text-gray-500">{formatDate(message.sent_date).time}</div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {funnelAssignments[message.id]?.length > 0 ? (
+                        funnelAssignments[message.id].map((funnelName, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {funnelName}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-400 text-xs">Not assigned</span>
+                      )}
+                    </div>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <div className="flex gap-2">
+                    {(messageType === 'broadcast' || messageType === 'email_broadcast') && (
+                      <button
+                        onClick={() => onSend(message.id)}
+                        className="inline-flex items-center justify-center p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        title={messageType === 'broadcast' ? 'Send SMS' : 'Send Email'}
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onEdit(message)}
+                      className="inline-flex items-center justify-center p-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onCopy(message)}
+                      className="inline-flex items-center justify-center p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                      title="Copy"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(message.id)}
+                      className="inline-flex items-center justify-center p-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+```
+
+---
+
+## STEP 8: MESSAGE MODAL COMPONENT
+
+Create `src/components/MessageModal.tsx`:
+
+```typescript
+import { useState, useEffect } from 'react';
+import { X, Plus, Save } from 'lucide-react';
+import { TextMessage, EmailMessage, supabase } from '../lib/supabase';
+
+interface MessageModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (message: Partial<TextMessage> | Partial<EmailMessage>) => void;
+  message?: TextMessage | EmailMessage | null;
+  mode: 'create' | 'edit';
+  messageChannel?: 'sms' | 'email';
+}
+
+export function MessageModal({ isOpen, onClose, onSave, message, mode, messageChannel = 'sms' }: MessageModalProps) {
+  const [formData, setFormData] = useState({
+    context_category: '',
+    content_name: '',
+    subject: '',
+    content: '',
+    message_type: 'broadcast' as 'broadcast' | 'funnel_content' | 'email_broadcast' | 'email_funnel_content'
+  });
+  const [categories, setCategories] = useState<string[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+
+  useEffect(() => {
+    if (message) {
+      setFormData({
+        context_category: message.context_category,
+        content_name: message.content_name,
+        subject: 'subject' in message ? message.subject : '',
+        content: message.content,
+        message_type: message.message_type
+      });
+    } else if (isOpen) {
+      const defaultType = messageChannel === 'email' ? 'email_broadcast' : 'broadcast';
+      setFormData({
+        context_category: '',
+        content_name: '',
+        subject: '',
+        content: '',
+        message_type: defaultType
+      });
+    }
+  }, [message, mode, isOpen, messageChannel]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen, formData.message_type]);
+
+  const fetchCategories = async () => {
+    const isEmailType = formData.message_type === 'email_broadcast' || formData.message_type === 'email_funnel_content';
+    const tableName = isEmailType ? 'email_categories' : 'categories';
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('name')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching categories:', error);
+    } else {
+      setCategories(data?.map(c => c.name) || []);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert('Category name is required');
+      return;
+    }
+
+    setCreatingCategory(true);
+    const isEmailType = formData.message_type === 'email_broadcast' || formData.message_type === 'email_funnel_content';
+    const tableName = isEmailType ? 'email_categories' : 'categories';
+    const { error } = await supabase
+      .from(tableName)
+      .insert([{
+        name: newCategoryName.trim(),
+        description: newCategoryDescription.trim() || null
+      }]);
+
+    if (error) {
+      console.error('Error creating category:', error);
+      alert('Failed to create category');
+    } else {
+      setFormData({ ...formData, context_category: newCategoryName.trim() });
+      setNewCategoryName('');
+      setNewCategoryDescription('');
+      setShowCategoryModal(false);
+      fetchCategories();
+    }
+    setCreatingCategory(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-semibold text-gray-900">
+            {mode === 'create' && message ? 'Copy Message' : mode === 'create' ? 'Create New Message' : 'Edit Message'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Content Category
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(true)}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Category
+              </button>
+            </div>
+            <select
+              required
+              value={formData.context_category}
+              onChange={(e) => setFormData({ ...formData, context_category: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select a category</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Content Name
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.content_name}
+              onChange={(e) => setFormData({ ...formData, content_name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., Welcome Message"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Message Type
+            </label>
+            <select
+              value={formData.message_type}
+              onChange={(e) => {
+                const newMessageType = e.target.value as any;
+                setFormData({ ...formData, message_type: newMessageType, context_category: '' });
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="broadcast">SMS Broadcast</option>
+              <option value="funnel_content">SMS Funnel Content</option>
+              <option value="email_broadcast">Email Broadcast</option>
+              <option value="email_funnel_content">Email Funnel Content</option>
+            </select>
+          </div>
+
+          {(formData.message_type === 'email_broadcast' || formData.message_type === 'email_funnel_content') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Subject
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter email subject"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Content
+            </label>
+            <textarea
+              required
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              rows={6}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder="Enter your message content here..."
+            />
+            <div className="mt-1 text-sm text-gray-500">
+              {formData.content.length} characters
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              {mode === 'create' ? 'Create Message' : 'Save Changes'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">Create New Category</h3>
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setNewCategoryName('');
+                  setNewCategoryDescription('');
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter category name"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryDescription}
+                  onChange={(e) => setNewCategoryDescription(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter description"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleCreateCategory}
+                  disabled={creatingCategory}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  {creatingCategory ? 'Creating...' : 'Create'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCategoryModal(false);
+                    setNewCategoryName('');
+                    setNewCategoryDescription('');
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## STEP 9: CATEGORIES TAB COMPONENT
+
+Create `src/components/CategoriesTab.tsx`:
+
+```typescript
+import { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, X, Save } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+type Category = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function CategoriesTab() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [categoryType, setCategoryType] = useState<'sms' | 'email'>('sms');
+
+  useEffect(() => {
+    fetchCategories();
+  }, [categoryType]);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching categories:', error);
+    } else {
+      setCategories(data || []);
+    }
+    setLoading(false);
+  };
+
+  const handleCreate = async () => {
+    if (!formData.name.trim()) {
+      alert('Category name is required');
+      return;
+    }
+
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
+    const { error } = await supabase
+      .from(tableName)
+      .insert([{
+        name: formData.name.trim(),
+        description: formData.description.trim() || null
+      }]);
+
+    if (error) {
+      console.error('Error creating category:', error);
+      alert('Failed to create category');
+    } else {
+      setFormData({ name: '', description: '' });
+      setIsCreating(false);
+      fetchCategories();
+    }
+  };
+
+  const handleUpdate = async (id: string) => {
+    if (!formData.name.trim()) {
+      alert('Category name is required');
+      return;
+    }
+
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
+    const { error } = await supabase
+      .from(tableName)
+      .update({
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating category:', error);
+      alert('Failed to update category');
+    } else {
+      setEditingId(null);
+      setFormData({ name: '', description: '' });
+      fetchCategories();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+
+    const tableName = categoryType === 'email' ? 'email_categories' : 'categories';
+    const { error } = await supabase
+      .from(tableName)
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting category:', error);
+      alert('Failed to delete category');
+    } else {
+      fetchCategories();
+    }
+  };
+
+  const startEdit = (category: Category) => {
+    setEditingId(category.id);
+    setFormData({ name: category.name, description: category.description || '' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setIsCreating(false);
+    setFormData({ name: '', description: '' });
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-gray-600">Loading categories...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Categories</h2>
+          <p className="text-sm text-gray-600 mt-1">Manage message categories</p>
+        </div>
+        <button
+          onClick={() => setIsCreating(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+        >
+          <Plus className="w-4 h-4" />
+          New Category
+        </button>
+      </div>
+
+      <div className="px-6 pt-4 pb-2 border-b border-gray-200">
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setCategoryType('sms');
+              setEditingId(null);
+              setIsCreating(false);
+              setFormData({ name: '', description: '' });
+            }}
+            className={\`px-6 py-2.5 rounded-lg font-medium transition-all \${
+              categoryType === 'sms'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+            }\`}
+          >
+            SMS Categories
+          </button>
+          <button
+            onClick={() => {
+              setCategoryType('email');
+              setEditingId(null);
+              setIsCreating(false);
+              setFormData({ name: '', description: '' });
+            }}
+            className={\`px-6 py-2.5 rounded-lg font-medium transition-all \${
+              categoryType === 'email'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+            }\`}
+          >
+            Email Categories
+          </button>
+        </div>
+      </div>
+
+      <div className="p-6">
+        {isCreating && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border-2 border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Create New Category</h3>
+              <button onClick={cancelEdit} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter category name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter description (optional)"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={cancelEdit}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreate}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {categories.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No categories found. Create your first category to get started.
+            </div>
+          ) : (
+            categories.map((category) => (
+              <div
+                key={category.id}
+                className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              >
+                {editingId === category.id ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-gray-900">Edit Category</h3>
+                      <button onClick={cancelEdit} className="text-gray-500 hover:text-gray-700">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Description
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={cancelEdit}
+                          className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleUpdate(category.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Save className="w-4 h-4" />
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{category.name}</h3>
+                      {category.description && (
+                        <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => startEdit(category)}
+                        className="p-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(category.id)}
+                        className="p-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## STEP 10: BROADCAST MODAL COMPONENT
+
+Create `src/components/BroadcastModal.tsx`:
+
+```typescript
+import { useState, useEffect } from 'react';
+import { X, Send } from 'lucide-react';
+import { supabase, TextMessage, EmailMessage } from '../lib/supabase';
+
+interface BroadcastModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  messageChannel?: 'sms' | 'email';
+}
+
+export function BroadcastModal({ isOpen, onClose, messageChannel = 'sms' }: BroadcastModalProps) {
+  const [broadcastMessages, setBroadcastMessages] = useState<(TextMessage | EmailMessage)[]>([]);
+  const [selectedMessageId, setSelectedMessageId] = useState('');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchBroadcastMessages();
+    }
+  }, [isOpen]);
+
+  const fetchBroadcastMessages = async () => {
+    const tableName = messageChannel === 'email' ? 'email_messages' : 'text_messages';
+    const messageType = messageChannel === 'email' ? 'email_broadcast' : 'broadcast';
+
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('message_type', messageType)
+      .order('content_name');
+
+    if (error) {
+      console.error('Error fetching broadcast messages:', error);
+    } else {
+      setBroadcastMessages(data || []);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!selectedMessageId) {
+      alert('Please select a message to send');
+      return;
+    }
+
+    setSending(true);
+    const tableName = messageChannel === 'email' ? 'email_messages' : 'text_messages';
+
+    const { error } = await supabase
+      .from(tableName)
+      .update({ sent_date: new Date().toISOString() })
+      .eq('id', selectedMessageId);
+
+    if (error) {
+      console.error('Error sending broadcast:', error);
+      alert('Failed to send broadcast');
+    } else {
+      alert('Broadcast sent successfully!');
+      setSelectedMessageId('');
+      onClose();
+    }
+    setSending(false);
+  };
+
+  const selectedMessage = broadcastMessages.find(m => m.id === selectedMessageId);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Send New {messageChannel === 'email' ? 'Email' : 'SMS'} Broadcast
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select {messageChannel === 'email' ? 'Email' : 'SMS'} Broadcast Message
+            </label>
+            <select
+              value={selectedMessageId}
+              onChange={(e) => setSelectedMessageId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Choose a message...</option>
+              {broadcastMessages.map((message) => (
+                <option key={message.id} value={message.id}>
+                  {message.content_name} ({message.context_category})
+                  {message.sent_date ? ' - Sent' : ' - Not Sent'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedMessage && (
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Message Preview</h3>
+                <div className="flex gap-4 text-sm text-gray-600">
+                  <span>
+                    <span className="font-medium">Category:</span> {selectedMessage.context_category}
+                  </span>
+                  <span>
+                    <span className="font-medium">Name:</span> {selectedMessage.content_name}
+                  </span>
+                </div>
+              </div>
+              {messageChannel === 'email' && 'subject' in selectedMessage && (
+                <div className="mb-3">
+                  <div className="text-sm font-medium text-gray-700 mb-1">Subject:</div>
+                  <div className="bg-white border border-gray-200 rounded p-3">
+                    <p className="text-gray-800 font-semibold">{selectedMessage.subject}</p>
+                  </div>
+                </div>
+              )}
+              <div className="bg-white border border-gray-200 rounded p-4">
+                <p className="text-gray-800 whitespace-pre-wrap">{selectedMessage.content}</p>
+              </div>
+              <div className="mt-3 text-sm text-gray-500">
+                {selectedMessage.content.length} characters
+                {selectedMessage.sent_date && (
+                  <span className="ml-4">
+                    Last sent: {new Date(selectedMessage.sent_date).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={handleSend}
+              disabled={!selectedMessageId || sending}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="w-5 h-5" />
+              {sending ? 'Sending...' : \`Send \${messageChannel === 'email' ? 'Email' : 'SMS'} Broadcast\`}
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-1 px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## STEP 11: MAIN APP COMPONENT
+
+Update `src/App.tsx` with the complete application logic. This is a long file - here it is in full:
+
+```typescript
+import { useState, useEffect } from 'react';
+import { MessageCircle, Plus, FolderOpen, Send, Search } from 'lucide-react';
+import { supabase, TextMessage, EmailMessage } from './lib/supabase';
+import { MessageTable } from './components/MessageTable';
+import { MessageModal } from './components/MessageModal';
+import { CategoriesTab } from './components/CategoriesTab';
+import { BroadcastModal } from './components/BroadcastModal';
+
+type FilterType = 'broadcast' | 'funnel_content' | 'email_broadcast' | 'email_funnel_content';
+type TabType = 'messages' | 'categories';
+
+function App() {
+  const [messages, setMessages] = useState<TextMessage[]>([]);
+  const [emailMessages, setEmailMessages] = useState<EmailMessage[]>([]);
+  const [filteredMessages, setFilteredMessages] = useState<(TextMessage | EmailMessage)[]>([]);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('broadcast');
+  const [activeTab, setActiveTab] = useState<TabType>('messages');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<TextMessage | EmailMessage | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [loading, setLoading] = useState(true);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [contentNameSearch, setContentNameSearch] = useState<string>('');
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchMessages();
+    fetchEmailMessages();
+  }, []);
+
+  useEffect(() => {
+    filterAndSortMessages();
+    updateAvailableCategories();
+  }, [messages, emailMessages, activeFilter]);
+
+  useEffect(() => {
+    filterAndSortMessages();
+  }, [categoryFilter, contentNameSearch]);
+
+  const updateAvailableCategories = () => {
+    const isEmail = activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content';
+    const sourceMessages = isEmail ? emailMessages : messages;
+    const filtered = sourceMessages.filter(msg => msg.message_type === activeFilter);
+    const categories = [...new Set(filtered.map(msg => msg.context_category))].sort();
+    setAvailableCategories(categories);
+  };
+
+  const fetchMessages = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('text_messages')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching messages:', error);
+    } else {
+      setMessages(data || []);
+    }
+    setLoading(false);
+  };
+
+  const fetchEmailMessages = async () => {
+    const { data, error } = await supabase
+      .from('email_messages')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching email messages:', error);
+    } else {
+      setEmailMessages(data || []);
+    }
+  };
+
+  const filterAndSortMessages = () => {
+    const isEmail = activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content';
+    const sourceMessages = isEmail ? emailMessages : messages;
+    let filtered = sourceMessages.filter(msg => msg.message_type === activeFilter);
+
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(msg => msg.context_category === categoryFilter);
+    }
+
+    if (contentNameSearch.trim()) {
+      const searchLower = contentNameSearch.toLowerCase().trim();
+      filtered = filtered.filter(msg =>
+        msg.content_name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (activeFilter === 'broadcast' || activeFilter === 'email_broadcast') {
+      const sorted = filtered.sort((a, b) => {
+        if (!a.sent_date && !b.sent_date) return 0;
+        if (!a.sent_date) return -1;
+        if (!b.sent_date) return 1;
+        return new Date(b.sent_date).getTime() - new Date(a.sent_date).getTime();
+      });
+      setFilteredMessages(sorted);
+    } else {
+      const sorted = filtered.sort((a, b) => {
+        const categoryCompare = a.context_category.localeCompare(b.context_category);
+        if (categoryCompare !== 0) return categoryCompare;
+        return a.content_name.localeCompare(b.content_name);
+      });
+      setFilteredMessages(sorted);
+    }
+  };
+
+  const handleSend = async (id: string) => {
+    const isEmail = activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content';
+    const tableName = isEmail ? 'email_messages' : 'text_messages';
+
+    const { error } = await supabase
+      .from(tableName)
+      .update({ sent_date: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error sending message:', error);
+      alert('Failed to send message');
+    } else {
+      if (isEmail) {
+        fetchEmailMessages();
+      } else {
+        fetchMessages();
+      }
+      alert('Message sent successfully!');
+    }
+  };
+
+  const handleEdit = (message: TextMessage | EmailMessage) => {
+    setEditingMessage(message);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  const handleCopy = (message: TextMessage | EmailMessage) => {
+    const copiedMessage = {
+      ...message,
+      content_name: \`\${message.content_name} (Copy)\`,
+      id: undefined
+    };
+
+    setEditingMessage(copiedMessage as TextMessage | EmailMessage);
+    setModalMode('create');
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this message?')) return;
+
+    const isEmail = activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content';
+    const tableName = isEmail ? 'email_messages' : 'text_messages';
+
+    const { error } = await supabase
+      .from(tableName)
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting message:', error);
+      alert('Failed to delete message');
+    } else {
+      if (isEmail) {
+        fetchEmailMessages();
+      } else {
+        fetchMessages();
+      }
+    }
+  };
+
+  const handleSaveMessage = async (messageData: Partial<TextMessage> | Partial<EmailMessage>) => {
+    const isEmail = 'subject' in messageData || messageData.message_type === 'email_broadcast' || messageData.message_type === 'email_funnel_content';
+    const tableName = isEmail ? 'email_messages' : 'text_messages';
+    if (modalMode === 'edit' && editingMessage) {
+      const { error } = await supabase
+        .from(tableName)
+        .update(messageData)
+        .eq('id', editingMessage.id);
+
+      if (error) {
+        console.error('Error updating message:', error);
+        alert('Failed to update message');
+      } else {
+        if (isEmail) {
+          fetchEmailMessages();
+        } else {
+          fetchMessages();
+        }
+        setIsModalOpen(false);
+        setEditingMessage(null);
+      }
+    } else {
+      const { error } = await supabase
+        .from(tableName)
+        .insert([messageData]);
+
+      if (error) {
+        console.error('Error creating message:', error);
+        alert('Failed to create message');
+      } else {
+        if (isEmail) {
+          fetchEmailMessages();
+        } else {
+          fetchMessages();
+        }
+        setIsModalOpen(false);
+      }
+    }
+  };
+
+  const handleCreateNew = () => {
+    setEditingMessage(null);
+    setModalMode('create');
+    setIsModalOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <MessageCircle className="w-8 h-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-gray-900">Message Management</h1>
+          </div>
+          <p className="text-gray-600">Manage your SMS and email broadcast and funnel content messages</p>
+        </div>
+
+        <div className="mb-6 flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={\`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 \${
+              activeTab === 'messages'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }\`}
+          >
+            <MessageCircle className="w-5 h-5" />
+            Messages
+          </button>
+          <button
+            onClick={() => setActiveTab('categories')}
+            className={\`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 \${
+              activeTab === 'categories'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }\`}
+          >
+            <FolderOpen className="w-5 h-5" />
+            Categories
+          </button>
+        </div>
+
+        {activeTab === 'messages' ? (
+          <>
+            <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => {
+                      setActiveFilter('broadcast');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={\`px-4 py-2 text-sm font-medium transition-all border-b-2 \${
+                      activeFilter === 'broadcast'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }\`}
+                  >
+                    SMS Broadcast
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter('funnel_content');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={\`px-4 py-2 text-sm font-medium transition-all border-b-2 \${
+                      activeFilter === 'funnel_content'
+                        ? 'border-emerald-500 text-emerald-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }\`}
+                  >
+                    SMS Funnel Content
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter('email_broadcast');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={\`px-4 py-2 text-sm font-medium transition-all border-b-2 \${
+                      activeFilter === 'email_broadcast'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }\`}
+                  >
+                    Email Broadcast
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveFilter('email_funnel_content');
+                      setCategoryFilter('all');
+                      setContentNameSearch('');
+                    }}
+                    className={\`px-4 py-2 text-sm font-medium transition-all border-b-2 \${
+                      activeFilter === 'email_funnel_content'
+                        ? 'border-cyan-500 text-cyan-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }\`}
+                  >
+                    Email Funnel Content
+                  </button>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  {activeFilter === 'broadcast' && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New SMS Broadcast
+                    </button>
+                  )}
+                  {activeFilter === 'funnel_content' && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New SMS Broadcast
+                    </button>
+                  )}
+                  {activeFilter === 'email_broadcast' && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New Email Broadcast
+                    </button>
+                  )}
+                  {activeFilter === 'email_funnel_content' && (
+                    <button
+                      onClick={() => setIsBroadcastModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors font-medium shadow-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send New Email Broadcast
+                    </button>
+                  )}
+                  <button
+                    onClick={handleCreateNew}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create New Message
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-6 bg-white rounded-lg shadow p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter by Category
+                  </label>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All Categories</option>
+                    {availableCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search by Content Name
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      value={contentNameSearch}
+                      onChange={(e) => setContentNameSearch(e.target.value)}
+                      placeholder="Search content name..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-3 text-sm text-gray-600">
+              Showing {filteredMessages.length} message{filteredMessages.length !== 1 ? 's' : ''}
+            </div>
+
+            {loading ? (
+              <div className="bg-white rounded-lg shadow p-12 text-center">
+                <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="mt-4 text-gray-600">Loading messages...</p>
+              </div>
+            ) : (
+              <MessageTable
+                messages={filteredMessages}
+                onSend={handleSend}
+                onEdit={handleEdit}
+                onCopy={handleCopy}
+                onDelete={handleDelete}
+                messageType={activeFilter}
+              />
+            )}
+          </>
+        ) : (
+          <CategoriesTab />
+        )}
+      </div>
+
+      <MessageModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingMessage(null);
+        }}
+        onSave={handleSaveMessage}
+        message={editingMessage}
+        mode={modalMode}
+        messageChannel={activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content' ? 'email' : 'sms'}
+      />
+
+      <BroadcastModal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => {
+          setIsBroadcastModalOpen(false);
+          fetchMessages();
+          fetchEmailMessages();
+        }}
+        messageChannel={activeFilter === 'email_broadcast' || activeFilter === 'email_funnel_content' ? 'email' : 'sms'}
+      />
+    </div>
+  );
+}
+
+export default App;
+```
+
+---
+
+## DATABASE SCHEMA REFERENCE
+
+**IMPORTANT:** These tables already exist in Supabase. DO NOT attempt to create them.
+
+### Tables:
+- `text_messages` - SMS broadcast and funnel content messages
+- `email_messages` - Email broadcast and funnel content messages
+- `categories` - SMS message categories
+- `email_categories` - Email message categories
+- `sales_funnels` - Sales funnel definitions (for future automation module)
+- `funnel_content_assignments` - Links messages to funnels
+
+---
+
+## TESTING THE APPLICATION
+
+Once deployed, you should be able to:
+
+1. Switch between Messages and Categories tabs
+2. Filter messages by type (SMS Broadcast, SMS Funnel Content, Email Broadcast, Email Funnel Content)
+3. Create, edit, copy, and delete messages
+4. Manage categories separately for SMS and Email
+5. Search and filter messages
+6. Send broadcast messages
+7. View funnel assignments (when Sales Funnel module is built)
+
+---
+
+## FINAL NOTES
+
+- All styling uses Tailwind CSS utility classes
+- Color scheme uses orange, emerald, blue, and cyan for different message types
+- UI is fully responsive
+- Database tables are pre-configured with proper RLS policies
+- This is production-ready code with no placeholder content
+
+**IMPORTANT:** Make sure to use the EXACT Supabase credentials provided in the .env section. The database is already set up and ready to use.
